@@ -1,0 +1,155 @@
+###Lesson 2 - Concepts in Experiment Design
+#types of experiment
+#Between-subjects design - 1 participant = 1 condition
+#-A/B test - compare performance between A and B
+#Within-subjects design - 1 participant = n conditions (like a degustation)
+#- only one rate: personal inclination + a good formula
+#- other rates: individual full preferences -> reduces variance on data
+#+1 conditions (e.g. 1 control group + 2 experiment groups)
+#and... collect data in differet ways
+#
+#types of sampling
+#strategy1: sample over the population (consider that it is homogeneous)
+#-Simple Random Sampling - all members = equal chance of selection
+#strategy2: break it in subgoups (e.g. rural zone, city zone)
+#-Stratified Random Sampling - each subgroup, equal number of relative to its population
+#-variability was not left to chance!
+#
+#measuring outcomes
+#sepparate: goal x measure of success
+#goal: "improve the recommendations -> get better performance"
+#evaluation metrics: -watch time, -ranking, -number of searches (concrete, measurable)
+#*take care that your metrics are:
+#- alligned with the goals that we set
+#- changing of a metric is NOT the main poin of the study!
+#- implications of this change is what is important
+#- goal -> center purpose of your study
+#
+#creating metrics
+#you have one, or more hypothesis "inserting a picture, increases the chance of a purchase"
+#purchase sequence -> User Funnel (steps or path, finishing to destination state)
+#*you can have alternative user funnels! (Unit of Diversion - observational unit to split users)
+#1.Evaluation Metrics -> features that provide -> objective measure 
+# (measure the success of a experimental manipulation)
+# (purchases x view, etc..)
+#2. Invariant Metrics -> objectively check the equivalence of the groups
+#
+#controlling variables
+#our goal: hability to say -> changes to variable 1 -> cause changes in variable 2 
+#*I need to control the effects of other variables!
+#Analysis Traps -> Confounding Variable -> hidden variable(s) that modulate both "cause" and "consequence"
+#
+#checking validity
+#What they say = what they mean 
+#Experimental Validity is: degree of experiments -> accomplishes the stated conclusions
+#3 ways for a experiment to be valid:
+#-Construct Validity - objective metric results -> goals of the study (degree) 
+#-Internal Validity - claims of causality -> supported by the analysis (ensure) 
+#-External Validity - experiments results -> generalizes to cases outside the experiment (degree)
+#
+#checking bias
+#Biologically: bias = quick efficient decisions
+#Experiment: systematic errors -> bad interpretations of the results
+#- sampling bias <- sample don't represent your population
+#-- geography, subgroups...
+#-- self-selection ("OK, we, all the motoboys present in this bar voluntarize to make the test!") - sampling bias
+#-- error on randomization
+#-- novelty bias
+#-- order bias (primacy bias, recency bias)
+#
+#Statistical Significance - SMART
+#Specific
+#Measurable
+#Achievable
+#Relevant
+#Timely fashion
+
+###Lesson 3
+#Statistical Considerations into testing
+#Notebook1: Statistical Significance
+#Have a randomizer cookie -> want to know if it is really randomizing well (50-50)
+
+# import packages
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
+from statsmodels.stats import proportion as proptests
+import matplotlib.pyplot as plt
+% matplotlib inline
+
+# import data
+data = pd.read_csv('../data/statistical_significance_data.csv')
+data.head(10)
+
+#I. Check de Invariant Metric
+#if they are imbalanced -> subgroups can exist! -> data is biased!
+#- in this case, one of your webservices could be providing only one of the options
+#for 2-sided tests -> test proportion of visitors for each group
+
+#I.1 analytic approach
+#exact binomial distribution -> p-value of the test or
+#normal distribution approximation (due to Central Limit Theorem) - for large sample size
+#then... for a precise p-value:
+#perform a continuity correction, adding or subtraction 0.5 from the total count before computing the area underneath de curve
+
+# get number of trials and number of 'successes'
+n_obs = data.shape[0]
+n_control = data.groupby('condition').size()[0]
+
+# Compute a z-score and p-value
+p = 0.5
+sd = np.sqrt(p * (1-p) * n_obs)
+
+z = ((n_control + 0.5) - p * n_obs) / sd
+
+print(z)
+print(2 * stats.norm.cdf(z))
+
+
+#I.2 - simulation approach
+# get number of trials and number of 'successes'
+n_obs = data.shape[0]
+n_control = data.groupby('condition').size()[0]
+
+# # simulate outcomes under null, compare to observed outcome
+p = 0.5
+n_trials = 200_000
+
+samples = np.random.binomial(n_obs, p, n_trials)
+
+print(np.logical_or(samples <= n_control, samples >= (n_obs - n_control)).mean())
+
+#check metrics
+p_click = data.groupby('condition').mean()['click']
+p_click
+
+p_click[1] - p_click[0]
+
+#Analytic approach
+# get number of trials and overall 'success' rate under null
+n_control = data.groupby('condition').size()[0]
+n_exper = data.groupby('condition').size()[1]
+p_null = data['click'].mean()
+
+# compute standard error, z-score, and p-value
+se_p = np.sqrt(p_null * (1-p_null) * (1/n_control + 1/n_exper))
+
+z = (p_click[1] - p_click[0]) / se_p
+print(z)
+print(1-stats.norm.cdf(z))
+
+#Simulation approach
+# get number of trials and overall 'success' rate under null
+n_control = data.groupby('condition').size()[0]
+n_exper = data.groupby('condition').size()[1]
+p_null = data['click'].mean()
+
+# simulate outcomes under null, compare to observed outcome
+n_trials = 200_000
+
+ctrl_clicks = np.random.binomial(n_control, p_null, n_trials)
+exp_clicks = np.random.binomial(n_exper, p_null, n_trials)
+samples = exp_clicks / n_exper - ctrl_clicks / n_control
+
+print((samples >= (p_click[1] - p_click[0])).mean())
+
