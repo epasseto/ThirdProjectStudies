@@ -1,6 +1,6 @@
 # ThirdProjectStudies
 
-Third Udacity studies notes, for the third project from Data Scientist course.
+Third Udacity studies notes, for help into the third project from Data Scientist course.
 
 These notebooks are strongly based on Udacity course Jupyter Notebooks and may be used for educational purposes only!
 
